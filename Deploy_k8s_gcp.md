@@ -4,6 +4,8 @@ Kubernetes Engine: Qwik Start
 Google Kubernetes Engine provides a managed environment for deploying, managing, and scaling your containerized applications using Google infrastructure. This hands-on lab shows you how deploy a containerized application with Kubernetes Engine. Watch the short video Manage Containerized Apps with Kubernetes Engine.
 Orchestrating the Cloud with Kubernetes
 In this lab you will learn how to provision a complete Kubernetes cluster using Google Container Engine; deploy and manage Docker containers using kubectl; and break an application into microservices using Kubernetes’ Deployments and Services.
+https://github.com/googlecodelabs/orchestrate-with-kubernetes
+
 ```
 Welcome to Cloud Shell! Type "help" to get started.
 Your Cloud Platform project in this session is set to qwiklabs-gcp-03-eb0de0cb52ee.
@@ -654,7 +656,789 @@ gke-io-default-pool-ff1906d4-pdk8  us-central1-b  e2-medium                  10.
 
 Managing Deployments Using Kubernetes Engine
 Dev Ops best practices make use of multiple deployments to manage application deployment scenarios. This lab provides practice in scaling and managing containers to accomplish common scenarios where multiple heterogeneous deployments are used.
+```
+gcloud auth list
+gcloud config set compute/zone us-central1-a
+gsutil -m cp -r gs://spls/gsp053/orchestrate-with-kubernetes .
+cd orchestrate-with-kubernetes/kubernetes
+gcloud container clusters create bootcamp --num-nodes 5 --scopes "https://www.googleapis.com/auth/projecthosting,storage-rw"
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ gcloud container clusters create bootcamp --num-nodes 5 --scopes "https://www.googleapis.com/auth/projecthosting,storage-rw"
+WARNING: Starting in January 2021, clusters will use the Regular release channel by default when `--cluster-version`, `--release-channel`, `--no-enable-autoupgrade`, and `--no-enable-autorepair` flags are not specified.
+WARNING: Currently VPC-native is not the default mode during cluster creation. In the future, this will become the default mode and can be disabled using `--no-enable-ip-alias` flag. Use `--[no-]enable-ip-alias` flag to suppress this warning.
+WARNING: Starting with version 1.18, clusters will have shielded GKE nodes by default.
+WARNING: Your Pod address range (`--cluster-ipv4-cidr`) can accommodate at most 1008 node(s).
+WARNING: Starting with version 1.19, newly created clusters and node-pools will have COS_CONTAINERD as the default node image when no image type is specified.
+Creating cluster bootcamp in us-central1-a... Cluster is being health-checked (master is healthy)...done.
+Created [https://container.googleapis.com/v1/projects/qwiklabs-gcp-00-6eac7c658b13/zones/us-central1-a/clusters/bootcamp].
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/us-central1-a/bootcamp?project=qwiklabs-gcp-00-6eac7c658b13
+kubeconfig entry generated for bootcamp.
+NAME      LOCATION       MASTER_VERSION   MASTER_IP      MACHINE_TYPE  NODE_VERSION     NUM_NODES  STATUS
+bootcamp  us-central1-a  1.18.16-gke.502  35.223.114.83  e2-medium     1.18.16-gke.502  5          RUNNING
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl explain deployment
+KIND:     Deployment
+VERSION:  apps/v1
+
+DESCRIPTION:
+     Deployment enables declarative updates for Pods and ReplicaSets.
+
+FIELDS:
+   apiVersion   <string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind <string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata     <Object>
+     Standard object metadata.
+
+   spec <Object>
+     Specification of the desired behavior of the Deployment.
+
+   status       <Object>
+     Most recently observed status of the Deployment.
+     
+
+
+kubectl explain deployment --recursive
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl explain deployment.metadata.name
+KIND:     Deployment
+VERSION:  apps/v1
+
+FIELD:    name <string>
+
+DESCRIPTION:
+     Name must be unique within a namespace. Is required when creating
+     resources, although some resources may allow a client to request the
+     generation of an appropriate name automatically. Name is primarily intended
+     for creation idempotence and configuration definition. Cannot be updated.
+     More info: http://kubernetes.io/docs/user-guide/identifiers#names
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ vi deployments/auth.yaml
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f deployments/auth.yaml
+deployment.apps/auth created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get deployments
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+auth   0/1     1            0           7s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get replicasets
+NAME              DESIRED   CURRENT   READY   AGE
+auth-7cffdb8677   1         1         0       11s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods
+NAME                    READY   STATUS    RESTARTS   AGE
+auth-7cffdb8677-5vptx   1/1     Running   0          19s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f services/auth.yaml
+service/auth created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f deployments/hello.yaml
+deployment.apps/hello created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f services/hello.yaml
+service/hello created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create secret generic tls-certs --from-file tls/
+secret/tls-certs created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create configmap nginx-frontend-conf --from-file=nginx/frontend.conf
+configmap/nginx-frontend-conf created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f deployments/frontend.yaml
+deployment.apps/frontend created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f services/frontend.yaml
+service/frontend created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get services frontend
+NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)         AGE
+frontend   LoadBalancer   10.115.247.104   <pending>     443:32107/TCP   25s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get services frontend
+NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)         AGE
+frontend   LoadBalancer   10.115.247.104   34.72.3.228   443:32107/TCP   41s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://34.72.3.228
+{"message":"Hello"}
+curl -ks https://`kubectl get svc frontend -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"`
+{"message":"Hello"}
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl explain deployment.spec.replicas
+KIND:     Deployment
+VERSION:  apps/v1
+
+FIELD:    replicas <integer>
+
+DESCRIPTION:
+     Number of desired pods. This is a pointer to distinguish between explicit
+     zero and not specified. Defaults to 1.
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl scale deployment hello --replicas=5
+deployment.apps/hello scaled
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods | grep hello- | wc -l
+5
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl scale deployment hello --replicas=3
+deployment.apps/hello scaled
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods | grep hello- | wc -l
+4
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods | grep hello- | wc -l
+3
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl edit deployment hello
+deployment.apps/hello edited
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get replicaset
+NAME                  DESIRED   CURRENT   READY   AGE
+auth-7cffdb8677       1         1         1       4m22s
+frontend-7b4b97c4dc   1         1         1       3m38s
+hello-687bb4b8f4      2         2         2       3m52s
+hello-d99c798f        2         2         1       9s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout history deployment/hello
+deployment.apps/hello
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout pause deployment/hello
+deployment.apps/hello paused
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout status deployment/hello
+deployment "hello" successfully rolled out
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods -o jsonpath --template='{range .items[*]}{.metadata.name}{"\t"}{"\t"}{.spec.containers[0].image}{"\n"}{end}'
+auth-7cffdb8677-5vptx           kelseyhightower/auth:1.0.0
+frontend-7b4b97c4dc-kg65m               nginx:1.9.14
+hello-d99c798f-2qvrf            kelseyhightower/hello:2.0.0
+hello-d99c798f-xmxsv            kelseyhightower/hello:2.0.0
+hello-d99c798f-xtgf7            kelseyhightower/hello:2.0.0
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout resume deployment/hello
+deployment.apps/hello resumed
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout status deployment/hello
+deployment "hello" successfully rolled out
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout undo deployment/hello
+deployment.apps/hello rolled back
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl rollout history deployment/hello
+deployment.apps/hello
+REVISION  CHANGE-CAUSE
+2         <none>
+3         <none>
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get pods -o jsonpath --template='{range .items[*]}{.metadata.name}{"\t"}{"\t"}{.spec.containers[0].image}{"\n"}{end}'
+auth-7cffdb8677-5vptx           kelseyhightower/auth:1.0.0
+frontend-7b4b97c4dc-kg65m               nginx:1.9.14
+hello-687bb4b8f4-h8sv8          kelseyhightower/hello:1.0.0
+hello-687bb4b8f4-vh6pc          kelseyhightower/hello:1.0.0
+hello-d99c798f-2qvrf            kelseyhightower/hello:2.0.0
+hello-d99c798f-xtgf7            kelseyhightower/hello:2.0.0
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ cat deployments/hello-canary.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello
+  template:
+    metadata:
+      labels:
+        app: hello
+        track: canary
+        version: 2.0.0
+    spec:
+      containers:
+        - name: hello
+          image: kelseyhightower/hello:2.0.0
+          ports:
+            - name: http
+              containerPort: 80
+            - name: health
+              containerPort: 81
+          resources:
+            limits:
+              cpu: 0.2
+              memory: 10Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 81
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 81
+              scheme: HTTP
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f deployments/hello-canary.yaml
+deployment.apps/hello-canary created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl get deployments
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+auth           1/1     1            1           6m48s
+frontend       1/1     1            1           6m4s
+hello          3/3     3            3           6m18s
+hello-canary   0/1     1            0           5s
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://`kubectl get svc frontend -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"`/version
+{"version":"1.0.0"}
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl apply -f services/hello-blue.yaml
+Warning: resource services/hello is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+service/hello configured
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl create -f deployments/hello-green.yaml
+deployment.apps/hello-green created
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://`kubectl get svc frontend -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"`/version
+{"version":"1.0.0"}
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl apply -f services/hello-green.yaml
+service/hello configured
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://`kubectl get svc frontend -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"`/version
+{"version":"2.0.0"}
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl explain deploymentKIND:     Deployment
+VERSION:  apps/v1
+
+DESCRIPTION:
+     Deployment enables declarative updates for Pods and ReplicaSets.
+
+FIELDS:
+   apiVersion   <string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind <string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata     <Object>
+     Standard object metadata.
+
+   spec <Object>
+     Specification of the desired behavior of the Deployment.
+
+   status       <Object>
+     Most recently observed status of the Deployment.
+
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ kubectl apply -f services/hello-blue.yamlservice/hello configured
+student_00_6cb649057f82@cloudshell:~/orchestrate-with-kubernetes/kubernetes (qwiklabs-gcp-00-6eac7c658b13)$ curl -ks https://`kubectl get svc frontend -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"`/version
+{"version":"1.0.0"}
+
+
+```
+
 Continuous Delivery with Jenkins in Kubernetes Engine
 In this lab you will deploy and completely configure a continuous delivery pipeline using Jenkins running on Kubernetes Engine and go through the dev - deploy process.
+
+```
+student_03_cab8fcbc3799@cloudshell:~ (qwiklabs-gcp-03-919c526475cd)$ gcloud auth list
+           Credentialed Accounts
+ACTIVE  ACCOUNT
+*       student-03-cab8fcbc3799@qwiklabs.net
+
+To set the active account, run:
+    $ gcloud config set account `ACCOUNT`
+
+student_03_cab8fcbc3799@cloudshell:~ (qwiklabs-gcp-03-919c526475cd)$ gcloud config set compute/zone us-east1-d
+Updated property [compute/zone].
+student_03_cab8fcbc3799@cloudshell:~ (qwiklabs-gcp-03-919c526475cd)$ git clone https://github.com/GoogleCloudPlatform/continuous-deployment-on-kubernetes.git
+Cloning into 'continuous-deployment-on-kubernetes'...
+remote: Enumerating objects: 941, done.
+remote: Total 941 (delta 0), reused 0 (delta 0), pack-reused 941
+Receiving objects: 100% (941/941), 1.91 MiB | 1.98 MiB/s, done.
+Resolving deltas: 100% (463/463), done.
+student_03_cab8fcbc3799@cloudshell:~ (qwiklabs-gcp-03-919c526475cd)$ cd continuous-deployment-on-kubernetes
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ gcloud container clusters create jenkins-cd \
+> --num-nodes 2 \
+> --machine-type n1-standard-2 \
+> --scopes "https://www.googleapis.com/auth/source.read_write,cloud-platform"
+WARNING: Starting in January 2021, clusters will use the Regular release channel by default when `--cluster-version`, `--release-channel`, `--no-enable-autoupgrade`, and `--no-enable-autorepair` flags are not specified.
+WARNING: Currently VPC-native is not the default mode during cluster creation. In the future, this will become the default mode and can be disabled using `--no-enable-ip-alias` flag. Use `--[no-]enable-ip-alias` flag to suppress this warning.
+WARNING: Starting with version 1.18, clusters will have shielded GKE nodes by default.
+WARNING: Your Pod address range (`--cluster-ipv4-cidr`) can accommodate at most 1008 node(s).
+WARNING: Starting with version 1.19, newly created clusters and node-pools will have COS_CONTAINERD as the default node image when no image type is specified.
+Creating cluster jenkins-cd in us-east1-d... Cluster is being health-checked (master is healthy)...done.                                                                                                 
+Created [https://container.googleapis.com/v1/projects/qwiklabs-gcp-03-919c526475cd/zones/us-east1-d/clusters/jenkins-cd].
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/us-east1-d/jenkins-cd?project=qwiklabs-gcp-03-919c526475cd
+kubeconfig entry generated for jenkins-cd.
+NAME        LOCATION    MASTER_VERSION   MASTER_IP       MACHINE_TYPE   NODE_VERSION     NUM_NODES  STATUS
+jenkins-cd  us-east1-d  1.18.16-gke.502  35.243.128.105  n1-standard-2  1.18.16-gke.502  2          RUNNING
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ gcloud container clusters list
+NAME        LOCATION    MASTER_VERSION   MASTER_IP       MACHINE_TYPE   NODE_VERSION     NUM_NODES  STATUS
+jenkins-cd  us-east1-d  1.18.16-gke.502  35.243.128.105  n1-standard-2  1.18.16-gke.502  2          RUNNING
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ gcloud container clusters get-credentials jenkins-cd
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for jenkins-cd.
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ kubectl cluster-info
+Kubernetes control plane is running at https://35.243.128.105
+GLBCDefaultBackend is running at https://35.243.128.105/api/v1/namespaces/kube-system/services/default-http-backend:http/proxy
+KubeDNS is running at https://35.243.128.105/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+Metrics-server is running at https://35.243.128.105/api/v1/namespaces/kube-system/services/https:metrics-server:/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ helm repo add jenkins https://charts.jenkins.io
+"jenkins" has been added to your repositories
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "jenkins" chart repository
+Update Complete. ⎈Happy Helming!⎈
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ helm install cd jenkins/jenkins -f jenkins/values.yaml --version 1.2.2 --wait
+NAME: cd
+LAST DEPLOYED: Fri Apr 23 05:40:56 2021
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+NOTES:
+1.printfo$(kubectl'getesecretw--namespaceidefault cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+ForLmorelinformationsonorunningoJenkinsaoneKubernetes,evisit:npp.kubernetes.io/component=jenkins-master" -l "app.kubernetes.io/instance=cd" -o jsonpath="{.items[0].metadata.name}")
+https://cloud.google.com/solutions/jenkins-on-container-engine
+
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ kubectl get pods
+NAME                          READY   STATUS    RESTARTS   AGE
+cd-jenkins-775588cddf-64kvv   1/1     Running   0          2m43s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ kubectl create clusterrolebinding jenkins-deploy --clusterrole=cluster-admin --serviceaccount=default:cd-jenkins
+clusterrolebinding.rbac.authorization.k8s.io/jenkins-deploy created
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ clusterrolebinding.rbac.authorization.k8s.io/jenkins-deploy created
+-bash: clusterrolebinding.rbac.authorization.k8s.io/jenkins-deploy: No such file or directory
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/component=jenkins-master-l "app.kubernetes.io/instance=cd" -o jsonpath="{.items[0].metadata.name}")
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ kubectl port-forward $POD_NAME 8080:8080 >> /dev/null &
+[1] 1449
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ kubectl get svc
+NAME               TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)     AGE
+cd-jenkins         ClusterIP   10.3.245.206   <none>        8080/TCP    3m20s
+cd-jenkins-agent   ClusterIP   10.3.240.164   <none>        50000/TCP   3m20s
+kubernetes         ClusterIP   10.3.240.1     <none>        443/TCP     5m17s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ printf $(kubectl get secret cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+JHA4L3X5D9
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes (qwiklabs-gcp-03-919c526475cd)$ cd sample-app
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl create ns production
+namespace/production created
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl apply -f k8s/production -n production
+deployment.apps/gceme-backend-production created
+deployment.apps/gceme-frontend-production created
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl apply -f k8s/canary -n production
+deployment.apps/gceme-backend-canary created
+deployment.apps/gceme-frontend-canary created
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl apply -f k8s/services -n production
+service/gceme-backend created
+service/gceme-frontend created
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl scale deployment gceme-frontend-production -n production --replicas 4
+deployment.apps/gceme-frontend-production scaled
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl get pods -n production -l app=gceme -l role=frontend
+NAME                                         READY   STATUS    RESTARTS   AGE
+gceme-frontend-canary-67f5ffdcdd-hchxh       0/1     Running   0          24s
+gceme-frontend-production-5f9dc74dfc-559fx   0/1     Running   0          5s
+gceme-frontend-production-5f9dc74dfc-ltpnq   0/1     Running   0          5s
+gceme-frontend-production-5f9dc74dfc-pt89w   0/1     Running   0          5s
+gceme-frontend-production-5f9dc74dfc-w2pgv   0/1     Running   0          30s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl get pods -n production -l app=gceme -l role=backend
+NAME                                        READY   STATUS    RESTARTS   AGE
+gceme-backend-canary-76f8f78894-d7smq       1/1     Running   0          30s
+gceme-backend-production-5c59b5bdcc-rk8w7   1/1     Running   0          37s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl get service gceme-frontend -n production
+NAME             TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)        AGE
+gceme-frontend   LoadBalancer   10.3.244.62   <pending>     80:31684/TCP   39s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl get service gceme-frontend -n production
+NAME             TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)        AGE
+gceme-frontend   LoadBalancer   10.3.244.62   35.237.27.108   80:31684/TCP   75s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ export FRONTEND_SERVICE_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}--namespace=production services gceme-frontend)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ curl http://$FRONTEND_SERVICE_IP/version
+1.0.0
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ gcloud source repos create default
+Created [default].
+WARNING: You may be billed for this repository. See https://cloud.google.com/source-repositories/docs/pricing for details.
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git init
+Initialized empty Git repository in /home/student_03_cab8fcbc3799/continuous-deployment-on-kubernetes/sample-app/.git/
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config credential.helper gcloud.sh
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git remote add origin https://source.developers.google.com/p/$DEVSHELL_PROJECT_ID/r/default
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.email student-03-cab8fcbc3799@qwiklabs.net
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global username student-03-cab8fcbc3799@qwiklabs.ne
+error: key does not contain a section: username
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git add .
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git commit -m "Initial commit"
+
+*** Please tell me who you are.
+
+Run
+
+  git config --global user.email "you@example.com"
+  git config --global user.name "Your Name"
+
+to set your account's default identity.
+Omit --global to set the identity only in this repository.
+
+fatal: empty ident name (for <student-03-cab8fcbc3799@qwiklabs.net>) not allowed
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.email student-03-cab8fcbc3799@qwiklabs.net
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.name "student-03-cab8fcbc3799"
+student_03_cab8f^C
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ ^C
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git commit -m "Initial commit"
+[master (root-commit) 73dcc86] Initial commit
+ 31 files changed, 2470 insertions(+)
+ create mode 100644 Dockerfile
+ create mode 100644 Gopkg.lock
+ create mode 100644 Gopkg.toml
+ create mode 100644 Jenkinsfile
+ create mode 100644 html.go
+ create mode 100644 k8s/canary/backend-canary.yaml
+ create mode 100644 k8s/canary/frontend-canary.yaml
+ create mode 100644 k8s/dev/backend-dev.yaml
+ create mode 100644 k8s/dev/default.yml
+ create mode 100644 k8s/dev/frontend-dev.yaml
+ create mode 100644 k8s/production/backend-production.yaml
+ create mode 100644 k8s/production/frontend-production.yaml
+ create mode 100644 k8s/services/backend.yaml
+ create mode 100644 k8s/services/frontend.yaml
+ create mode 100644 main.go
+ create mode 100644 main_test.go
+ create mode 100644 vendor/cloud.google.com/go/AUTHORS
+ create mode 100644 vendor/cloud.google.com/go/CONTRIBUTORS
+ create mode 100644 vendor/cloud.google.com/go/LICENSE
+ create mode 100644 vendor/cloud.google.com/go/compute/metadata/metadata.go
+ create mode 100644 vendor/golang.org/x/net/AUTHORS
+ create mode 100644 vendor/golang.org/x/net/CONTRIBUTORS
+ create mode 100644 vendor/golang.org/x/net/LICENSE
+ create mode 100644 vendor/golang.org/x/net/PATENTS
+ create mode 100644 vendor/golang.org/x/net/context/context.go
+ create mode 100644 vendor/golang.org/x/net/context/ctxhttp/ctxhttp.go
+ create mode 100644 vendor/golang.org/x/net/context/ctxhttp/ctxhttp_pre17.go
+ create mode 100644 vendor/golang.org/x/net/context/go17.go
+ create mode 100644 vendor/golang.org/x/net/context/go19.go
+ create mode 100644 vendor/golang.org/x/net/context/pre_go17.go
+ create mode 100644 vendor/golang.org/x/net/context/pre_go19.go
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git push origin master
+Enumerating objects: 48, done.
+Counting objects: 100% (48/48), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (43/43), done.
+Writing objects: 100% (48/48), 27.23 KiB | 3.02 MiB/s, done.
+Total 48 (delta 11), reused 0 (delta 0)
+remote: Resolving deltas: 100% (11/11)
+To https://source.developers.google.com/p/qwiklabs-gcp-03-919c526475cd/r/default
+ * [new branch]      master -> master
+
+-919c526475cd)$ kubectl get service gceme-frontend -n production
+NAME             TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)        AGE
+gceme-frontend   LoadBalancer   10.3.244.62   35.237.27.108   80:31684/TCP   75s
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ export FRONTEND_SERVICE_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ curl http://$FRONTEND_SERVICE_IP/version
+1.0.0
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ gcloud source repos create default
+Created [default].
+WARNING: You may be billed for this repository. See https://cloud.google.com/source-repositories/docs/pricing for details.
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git init
+Initialized empty Git repository in /home/student_03_cab8fcbc3799/continuous-deployment-on-kubernetes/sample-app/.git/
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config credential.helper gcloud.sh
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git remote add origin https://source.developers.google.com/p/$DEVSHELL_PROJECT_ID/r/defaul
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.email student-03-cab8fcbc3799@qwiklabs.net
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global username student-03-cab8fcbc3799@qwiklabs.ne
+error: key does not contain a section: username
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git add .
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git commit -m "Initial commit"
+
+*** Please tell me who you are.
+
+Run
+
+  git config --global user.email "you@example.com"
+  git config --global user.name "Your Name"
+
+to set your account's default identity.
+Omit --global to set the identity only in this repository.
+
+fatal: empty ident name (for <student-03-cab8fcbc3799@qwiklabs.net>) not allowed
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.email student-03-cab8fcbc3799@qwiklabs.net                 
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+····································································································
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.email student-03-cab8fcbc3799@qwiklabs.net                 
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git config --global user.name "student-03-cab8fcbc3799"                             
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ ^C
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ ^C
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git commit -m "Initial commit"
+pipeline {
+[master (root-commit) 73dcc86] Initial commit
+ 31 files changed, 2470 insertions(+)
+ create mode 100644 Dockerfile
+ create mode 100644 Gopkg.lock
+ create mode 100644 Gopkg.toml
+ create mode 100644 Jenkinsfile
+ create mode 100644 html.go
+ create mode 100644 k8s/canary/backend-canary.yaml
+ create mode 100644 k8s/canary/frontend-canary.yaml
+ create mode 100644 k8s/dev/backend-dev.yaml
+ create mode 100644 k8s/dev/default.yml
+ create mode 100644 k8s/dev/frontend-dev.yaml
+ create mode 100644 k8s/production/backend-production.yaml
+ create mode 100644 k8s/production/frontend-production.yaml
+ create mode 100644 k8s/services/backend.yaml
+ create mode 100644 k8s/services/frontend.yaml
+ create mode 100644 main.go
+ create mode 100644 main_test.go
+ create mode 100644 vendor/cloud.google.com/go/AUTHORS
+ create mode 100644 vendor/cloud.google.com/go/CONTRIBUTORS
+ create mode 100644 vendor/cloud.google.com/go/LICENSE
+ create mode 100644 vendor/cloud.google.com/go/compute/metadata/metadata.go
+ create mode 100644 vendor/golang.org/x/net/AUTHORS
+ create mode 100644 vendor/golang.org/x/net/CONTRIBUTORS
+ create mode 100644 vendor/golang.org/x/net/LICENSE
+ create mode 100644 vendor/golang.org/x/net/PATENTS
+ create mode 100644 vendor/golang.org/x/net/context/context.go
+ create mode 100644 vendor/golang.org/x/net/context/ctxhttp/ctxhttp.go
+ create mode 100644 vendor/golang.org/x/net/context/ctxhttp/ctxhttp_pre17.go
+ create mode 100644 vendor/golang.org/x/net/context/go17.go
+ create mode 100644 vendor/golang.org/x/net/context/go19.go
+ create mode 100644 vendor/golang.org/x/net/context/pre_go17.go
+ create mode 100644 vendor/golang.org/x/net/context/pre_go19.go
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git push origin master
+Enumerating objects: 48, done.
+Counting objects: 100% (48/48), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (43/43), done.
+Writing objects: 100% (48/48), 27.23 KiB | 3.02 MiB/s, done.
+Total 48 (delta 11), reused 0 (delta 0)
+remote: Resolving deltas: 100% (11/11)
+To https://source.developers.google.com/p/qwiklabs-gcp-03-919c526475cd/r/default
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git checkout -b new-feature
+Switched to a new branch 'new-feature'
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ vi Jenkinsfile
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ cat Jenkinsfile
+pipeline {
+
+  environment {
+    PROJECT = "qwiklabs-gcp-03-919c526475cd"
+    APP_NAME = "gceme"
+    FE_SVC_NAME = "${APP_NAME}-frontend"
+    CLUSTER = "jenkins-cd"
+    CLUSTER_ZONE = "us-east1-d"
+    IMAGE_TAG = "gcr.io/${PROJECT}/${APP_NAME}:${env.BRANCH_NAME}.${env.BUILD_NUMBER}"
+    JENKINS_CRED = "${PROJECT}"
+  }
+
+  agent {
+    kubernetes {
+      label 'sample-app'
+      defaultContainer 'jnlp'
+      yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+labels:
+  component: ci
+spec:
+  # Use service account that can deploy to all namespaces
+  serviceAccountName: cd-jenkins
+  containers:
+  - name: golang
+    image: golang:1.10
+    command:
+    - cat
+    tty: true
+  - name: gcloud
+    image: gcr.io/cloud-builders/gcloud
+    command:
+    - cat
+    tty: true
+  - name: kubectl
+    image: gcr.io/cloud-builders/kubectl
+    command:
+    - cat
+    tty: true
+"""
+}
+  }
+  stages {
+    stage('Test') {
+      steps {
+        container('golang') {
+          sh """
+            ln -s `pwd` /go/src/sample-app
+            cd /go/src/sample-app
+            go test
+          """
+        }
+      }
+    }
+    stage('Build and push image with Container Builder') {
+      steps {
+        container('gcloud') {
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${IMAGE_TAG} ."
+        }
+      }
+    }
+    stage('Deploy Canary') {
+      // Canary branch
+      when { branch 'canary' }
+      steps {
+        container('kubectl') {
+          // Change deployed image in canary to the one we just built
+          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/gceme:1.0.0#${IMAGE_TAG}#' ./k8s/canary/*.yaml")
+          <td>{{.Hostname}}</td>          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKIN
+# Licensed under the Apache License, Version 2.0 (the "License");
+S_CRED, verifyDeployments: false])
+          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/canary', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
+        }
+      }
+    }
+    stage('Deploy Production') {
+      // Production branch
+      when { branch 'master' }      steps{        container('kubectl') {        // Change deployed image in canary to the one we just built          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/gceme:1.0.0#${IMAGE_TAG}#' ./k8s/production/*.yaml")
+          """
+        }
+      }
+    }
+    stage('Build and push image with Container Builder') {
+      steps {
+        container('gcloud') {
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${IMAGE_TAG} ."
+        }
+      }
+    }
+    stage('Deploy Canary') {
+      // Canary branch
+      when { branch 'canary' }
+      steps {
+        container('kubectl') {
+          // Change deployed image in canary to the one we just built
+          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/gceme:1.0.0#${IMAGE_TAG}#' ./k8s/canary/*.yaml")
+          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
+          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/canary', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
+        }
+      }
+    }
+    stage('Deploy Production') {
+      // Production branch
+      when { branch 'master' }
+      steps{
+        container('kubectl') {
+        // Change deployed image in canary to the one we just built
+          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/gceme:1.0.0#${IMAGE_TAG}#' ./k8s/production/*.yaml")
+          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
+          step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/production', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
+        }
+      }
+    }
+    stage('Deploy Dev') {
+      // Developer Branches
+      when {
+        not { branch 'master' }
+        not { branch 'canary' }
+      }
+      steps {
+        container('kubectl') {
+          // Create namespace if it doesn't exist
+          sh("kubectl get ns ${env.BRANCH_NAME} || kubectl create ns ${env.BRANCH_NAME}")
+          // Don't use public load balancing for development branches
+          sh("sed -i.bak 's#LoadBalancer#ClusterIP#' ./k8s/services/frontend.yaml")
+          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/gceme:1.0.0#${IMAGE_TAG}#' ./k8s/dev/*.yaml")
+          step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
+          step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/dev', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          echo 'To access your environment run `kubectl proxy`'
+          echo "Then access your service via http://localhost:8001/api/v1/proxy/namespaces/${env.BRANCH_NAME}/services/${FE_SVC_NAME}:80/"
+        }
+      }
+    }
+  }
+}
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ vi html.go
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ vi main.go
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git add Jenkinsfile html.go main.go
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git commit -m "Version 2.0.0"
+[new-feature 19b700f] Version 2.0.0
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git push origin new-feature
+Enumerating objects: 9, done.
+Counting objects: 100% (9/9), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (5/5), 487 bytes | 487.00 KiB/s, done.
+Total 5 (delta 4), reused 0 (delta 0)
+remote: Resolving deltas: 100% (4/4)
+To https://source.developers.google.com/p/qwiklabs-gcp-03-919c526475cd/r/default
+ * [new branch]      new-feature -> new-feature
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ kubectl proxy &
+[2] 2136
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ Starting to serve on 127.0.0.1:8001
+
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ curl \
+> http://localhost:8001/api/v1/namespaces/new-feature/services/gceme-frontend:80/proxy/version
+2.0.0
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git checkout -b canary
+Switched to a new branch 'canary'
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git push origin canary
+Total 0 (delta 0), reused 0 (delta 0)
+To https://source.developers.google.com/p/qwiklabs-gcp-03-919c526475cd/r/default
+ * [new branch]      canary -> canary
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ export FRONTEND_SERVICE_IP=$(kubectl get -o \
+> jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1; done
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+1.0.0
+^C
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git checkout master
+Switched to branch 'master'
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git merge canary
+Updating 73dcc86..19b700f
+Fast-forward
+ Jenkinsfile | 2 +-
+ html.go     | 4 ++--
+ main.go     | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ git push origin master
+Total 0 (delta 0), reused 0 (delta 0)
+To https://source.developers.google.com/p/qwiklabs-gcp-03-919c526475cd/r/default
+   73dcc86..19b700f  master -> master
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ export FRONTEND_SERVICE_IP=$(kubectl get -o \
+> jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$
+student_03_cab8fcbc3799@cloudshell:~/continuous-deployment-on-kubernetes/sample-app (qwiklabs-gcp-03-919c526475cd)$ while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1; done
+1.0.0
+1.0.0
+1.0.0
+...
+
+2.0.0
+2.0.0
+2.0.0
+2.0.0
+2.0.0
+2.0.0
+```
+
 Deploy to Kubernetes in Google Cloud: Challenge Lab
 This challenge lab tests your skills and knowledge from the labs in the Kubernetes in Google Cloud quest. You should be familiar with the content of the labs before attempting this lab.
+
